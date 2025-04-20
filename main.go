@@ -8,7 +8,7 @@ import(
 
 func main() {
 	port := "8080"
-	webpath := "."
+	webpath := "./content"
 
 	rootpath := http.Dir(webpath)
 	rootHandler := http.FileServer(rootpath)
