@@ -1,33 +1,36 @@
 package main
 
 import(
-	//"fmt"
 	"log"
 	"net/http"
+	"sync/atomic"
 )
 
-func health(w http.ResponseWriter, req *http.Request) {
-	w.Header().Set("Content-Type", "text/plain; charset=utf-8") // normal header
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("OK"))
+type apiConfig struct {
+	fileserverHits atomic.Int32
 }
-/*
-The endpoint should simply return a 200 OK status code indicating that it has
-started up successfully and is listening for traffic. The endpoint should return
-a Content-Type: text/plain; charset=utf-8 header, and the body will contain a
-message that simply says "OK" (the text associated with the 200 status code).
-*/
+
+func (cfg *apiConfig) middlewareMetricsInc(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("nr hits now: %d\n",cfg.fileserverHits.Add(1))
+		next.ServeHTTP(w, r)
+	})
+}
 
 func main() {
 	port := "8080"
 	webpath := "./content" //root directory for the website. the lesson uses the programs dir for this.
+	apiCfg := &apiConfig{}
+	apiCfg.fileserverHits.Store(int32(0))
 
 	rootpath := http.Dir(webpath)
 	rootHandler := http.FileServer(rootpath)
 
 	serveMux := http.NewServeMux()
-	serveMux.Handle("/app/",http.StripPrefix("/app",rootHandler)) //Static file content
-	serveMux.HandleFunc("/healthz", health) //health check to see if site is ready to receive.
+	serveMux.Handle("/app/",apiCfg.middlewareMetricsInc(http.StripPrefix("/app",rootHandler))) //Static file content
+	serveMux.HandleFunc("/healthz", Health) //health check to see if site is ready to receive.
+	serveMux.HandleFunc("/metrics", apiCfg.Stats) //show the server statistics
+	serveMux.HandleFunc("/reset", apiCfg.Reset) 
 
 	server := &http.Server{
 		Addr: ":" + port, //they used a constant for the port, this may be required at some point.
@@ -41,4 +44,5 @@ func main() {
 /*
 WIP examples go here
 
+ mux.Handle("/app/", apiCfg.middlewareMetricsInc(handler))
 */
