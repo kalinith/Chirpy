@@ -28,9 +28,9 @@ func main() {
 
 	serveMux := http.NewServeMux()
 	serveMux.Handle("/app/",apiCfg.middlewareMetricsInc(http.StripPrefix("/app",rootHandler))) //Static file content
-	serveMux.HandleFunc("/healthz", Health) //health check to see if site is ready to receive.
-	serveMux.HandleFunc("/metrics", apiCfg.Stats) //show the server statistics
-	serveMux.HandleFunc("/reset", apiCfg.Reset) 
+	serveMux.HandleFunc("GET /healthz", Health) //health check to see if site is ready to receive.
+	serveMux.HandleFunc("GET /metrics", apiCfg.Stats) //show the server statistics
+	serveMux.HandleFunc("POST /reset", apiCfg.Reset) 
 
 	server := &http.Server{
 		Addr: ":" + port, //they used a constant for the port, this may be required at some point.
