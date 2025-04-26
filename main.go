@@ -3,19 +3,7 @@ package main
 import(
 	"log"
 	"net/http"
-	"sync/atomic"
 )
-
-type apiConfig struct {
-	fileserverHits atomic.Int32
-}
-
-func (cfg *apiConfig) middlewareMetricsInc(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		log.Printf("nr hits now: %d\n",cfg.fileserverHits.Add(1))
-		next.ServeHTTP(w, r)
-	})
-}
 
 func main() {
 	port := "8080"
@@ -28,9 +16,9 @@ func main() {
 
 	serveMux := http.NewServeMux()
 	serveMux.Handle("/app/",apiCfg.middlewareMetricsInc(http.StripPrefix("/app",rootHandler))) //Static file content
-	serveMux.HandleFunc("GET /api/healthz", Health) //health check to see if site is ready to receive.
-	serveMux.HandleFunc("GET /api/metrics", apiCfg.Stats) //show the server statistics
-	serveMux.HandleFunc("POST /api/reset", apiCfg.Reset) 
+	serveMux.HandleFunc("GET /api/healthz", health) //health check to see if site is ready to receive.
+	serveMux.HandleFunc("GET /admin/metrics", apiCfg.metrics) //show the server statistics
+	serveMux.HandleFunc("POST /admin/reset", apiCfg.reset) 
 
 	server := &http.Server{
 		Addr: ":" + port, //they used a constant for the port, this may be required at some point.

@@ -5,7 +5,7 @@ import(
 	"net/http"
 )
 
-func Health(w http.ResponseWriter, req *http.Request) {
+func health(w http.ResponseWriter, req *http.Request) {
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8") // normal header
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("OK"))
@@ -18,14 +18,17 @@ message that simply says "OK" (the text associated with the 200 status code).
 */
 
 
-func (cfg *apiConfig) Stats(w http.ResponseWriter, req *http.Request) {
-	stat1 := fmt.Sprintf("Hits: %d", cfg.fileserverHits.Load())
-	w.Header().Set("Content-Type", "text/plain; charset=utf-8") // normal header
+func (cfg *apiConfig) metrics(w http.ResponseWriter, req *http.Request) {
+	//stat1 := fmt.Sprintf("Hits: %d", cfg.fileserverHits.Load())
+	w.Header().Set("Content-Type", "text/html; charset=utf-8") // normal header
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(stat1))
+
+	body := fmt.Sprintf("<html>\n  <body>\n    <h1>Welcome, Chirpy Admin</h1>\n    <p>Chirpy has been visited %d times!</p>\n  </body>\n</html>", cfg.fileserverHits.Load())
+
+	w.Write([]byte(body))
 }
 
-func (cfg *apiConfig) Reset(w http.ResponseWriter, req *http.Request) {
+func (cfg *apiConfig) reset(w http.ResponseWriter, req *http.Request) {
 	cfg.fileserverHits.Store(0)
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8") // normal header
 	w.WriteHeader(http.StatusOK)
