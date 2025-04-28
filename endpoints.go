@@ -3,6 +3,7 @@ package main
 import(
 	"fmt"
 	"net/http"
+	"encoding/json"
 )
 
 func health(w http.ResponseWriter, req *http.Request) {
@@ -34,5 +35,49 @@ func (cfg *apiConfig) reset(w http.ResponseWriter, req *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+func (cfg *apiConfig) validate(w http.ResponseWriter, req *http.Request) {
+    type parameters struct {
+        // these tags indicate how the keys in the JSON should be mapped to the struct fields
+        // the struct fields must be exported (start with a capital letter) if you want them parsed
+        Body string `json:"body"`
+    }
+ 	type returnVals struct {
+        // the key will be the name of struct field unless you give it an explicit JSON tag
+        Err string `json:"error"`
+        Valid bool `json:"valid"`
+    }
 
+    w.Header().Set("Content-Type", "application/json")
+    header := 404
+    params := parameters{}
+    returns := returnVals{}
 
+    decoder := json.NewDecoder(req.Body)
+    err := decoder.Decode(&params)
+    if err != nil {
+        // an error will be thrown if the JSON is invalid or has the wrong types
+        // any missing fields will simply have their values in the struct set to their zero value
+		returns.Err = "Something went wrong"
+		returns.Valid = false
+		header = 500
+    }
+    if err == nil {
+    	if len(params.Body) > 140 {
+    		header = 400
+    		returns.Err = "Chirp is too long"
+    		returns.Valid = false
+    	} else {
+    		header = 200
+    		returns.Valid = true
+    	}
+    }
+
+    dat, err := json.Marshal(returns)
+	if err != nil {
+			dat, _ = json.Marshal(returnVals{fmt.Sprintf("Error marshalling JSON: %s", err), false})
+			header = 500 
+	}
+	w.WriteHeader(header)
+    w.Write(dat)
+
+}
