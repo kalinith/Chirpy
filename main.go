@@ -19,7 +19,7 @@ func main() {
 	serveMux.HandleFunc("GET /api/healthz", health) //health check to see if site is ready to receive.
 	serveMux.HandleFunc("GET /admin/metrics", apiCfg.metrics) //show the server statistics
 	serveMux.HandleFunc("POST /admin/reset", apiCfg.reset) //reset metrics
-	serveMux.HandleFunc("POST /api/validate_chirp", apiCfg.validate) //validate chirp length
+	serveMux.HandleFunc("POST /api/validate_chirp", apiCfg.validate_Chirp) //validate chirp length
 
 	server := &http.Server{
 		Addr: ":" + port, //they used a constant for the port, this may be required at some point.

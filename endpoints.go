@@ -35,7 +35,7 @@ func (cfg *apiConfig) reset(w http.ResponseWriter, req *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func (cfg *apiConfig) validate(w http.ResponseWriter, req *http.Request) {
+func (cfg *apiConfig) validate_Chirp(w http.ResponseWriter, req *http.Request) {
     type parameters struct {
         // these tags indicate how the keys in the JSON should be mapped to the struct fields
         // the struct fields must be exported (start with a capital letter) if you want them parsed
@@ -45,6 +45,7 @@ func (cfg *apiConfig) validate(w http.ResponseWriter, req *http.Request) {
         // the key will be the name of struct field unless you give it an explicit JSON tag
         Err string `json:"error"`
         Valid bool `json:"valid"`
+        Cleaned_body string `json:"cleaned_body"`
     }
 
     w.Header().Set("Content-Type", "application/json")
@@ -59,6 +60,7 @@ func (cfg *apiConfig) validate(w http.ResponseWriter, req *http.Request) {
         // any missing fields will simply have their values in the struct set to their zero value
 		returns.Err = "Something went wrong"
 		returns.Valid = false
+		returns.Cleaned_body = ""
 		header = 500
     }
     if err == nil {
@@ -66,15 +68,17 @@ func (cfg *apiConfig) validate(w http.ResponseWriter, req *http.Request) {
     		header = 400
     		returns.Err = "Chirp is too long"
     		returns.Valid = false
+    		returns.Cleaned_body = ""
     	} else {
     		header = 200
     		returns.Valid = true
+    		returns.Cleaned_body = cleanString(params.Body)
     	}
     }
 
     dat, err := json.Marshal(returns)
 	if err != nil {
-			dat, _ = json.Marshal(returnVals{fmt.Sprintf("Error marshalling JSON: %s", err), false})
+			dat, _ = json.Marshal(returnVals{fmt.Sprintf("Error marshalling JSON: %s", err), false, ""})
 			header = 500 
 	}
 	w.WriteHeader(header)
