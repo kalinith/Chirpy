@@ -2,8 +2,11 @@ package main
 
 import(
 	"fmt"
+	"log"
 	"net/http"
 	"encoding/json"
+	//"github.com/google/uuid"
+	//"Chirpy/internal/database"
 )
 
 func health(w http.ResponseWriter, req *http.Request) {
@@ -83,5 +86,57 @@ func (cfg *apiConfig) validate_Chirp(w http.ResponseWriter, req *http.Request) {
 	}
 	w.WriteHeader(header)
     w.Write(dat)
+
+}
+
+func (cfg *apiConfig) addUser(w http.ResponseWriter, req *http.Request) {
+    type parameters struct {
+        // these tags indicate how the keys in the JSON should be mapped to the struct fields
+        // the struct fields must be exported (start with a capital letter) if you want them parsed
+		Email string `json:"email"`
+	}
+
+    params := parameters{}
+    returns := User{}
+
+    decoder := json.NewDecoder(req.Body)
+    err := decoder.Decode(&params)
+    if err != nil {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8") // normal header
+		w.WriteHeader(500)
+		w.Write([]byte("error decoding Add User Request Parameters"))
+		log.Printf("error decoding Add User Request: %s", err)
+		return
+    }
+
+    //create user here using params.Email
+    dbUser, err := cfg.dbQueries.CreateUser(req.Context(), params.Email)
+	if err != nil {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8") // normal header
+		w.WriteHeader(500)
+		w.Write([]byte("error: Unable to add user"))
+		log.Printf("Unable to add user error: %s", err)
+		return
+	}
+
+	returns.ID = dbUser.ID
+	returns.CreatedAt = dbUser.CreatedAt
+	returns.UpdatedAt = dbUser.UpdatedAt
+	returns.Email = dbUser.Email
+
+    //formulate reply here
+    dat, err := json.Marshal(returns)
+	if err != nil {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8") // normal header
+		w.WriteHeader(500)
+		w.Write([]byte("Error marshalling JSON"))
+		log.Printf("Error marshalling JSON: %s", err)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+    w.Write(dat)
+
+
 
 }
