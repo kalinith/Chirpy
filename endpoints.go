@@ -33,9 +33,32 @@ func (cfg *apiConfig) metrics(w http.ResponseWriter, req *http.Request) {
 }
 
 func (cfg *apiConfig) reset(w http.ResponseWriter, req *http.Request) {
+	if cfg.platform != "dev" {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8") // normal header
+		w.WriteHeader(403)
+		w.Write([]byte("Forbidden"))
+		log.Printf("Non Dev call to reset system")
+		return
+	}
+	err := cfg.dbQueries.DeleteUsers(req.Context())
+	if err != nil {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8") // normal header
+		w.WriteHeader(500)
+		w.Write([]byte("error: Unable to reset user table"))
+		log.Printf("Unable to remove users error: %s", err)
+		return
+	}
 	cfg.fileserverHits.Store(0)
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8") // normal header
 	w.WriteHeader(http.StatusOK)
+
+	//Update the POST /admin/reset endpoint to delete all users in the database
+	// (but don't mess with the schema). You'll need a new SQLC query for this.
+	// Add a new value to your .env file called PLATFORM and set it equal to "dev".
+	// Read it into your apiConfig. If PLATFORM is not equal to "dev", this endpoint 
+	// should return a 403 Forbidden. This ensures that this extremely dangerous endpoint
+	// can only be accessed in a local development environment.
+
 }
 
 func (cfg *apiConfig) validate_Chirp(w http.ResponseWriter, req *http.Request) {

@@ -13,7 +13,7 @@ import(
 type apiConfig struct {
 	fileserverHits atomic.Int32
 	dbQueries *database.Queries
-	user User
+	platform string
 }
 
 type User struct {

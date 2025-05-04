@@ -17,8 +17,8 @@ func main() {
 	apiCfg := &apiConfig{}
 	apiCfg.fileserverHits.Store(int32(0))
 	dbURL := os.Getenv("DB_URL")
-	apiCfg.user = User{}
-
+	apiCfg.platform = os.Getenv("PLATFORM")
+	
 	db, err := sql.Open("postgres", dbURL)
 	if err != nil {
 		log.Fatal("unable to open DB")
