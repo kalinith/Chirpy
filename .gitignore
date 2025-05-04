@@ -8,6 +8,8 @@
 *.so
 *.dylib
 Chirpy
+goose.sh
+sqlc.yaml
 
 # Test binary, built with `go test -c`
 *.test
