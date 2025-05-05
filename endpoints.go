@@ -3,10 +3,11 @@ package main
 import(
 	"fmt"
 	"log"
+	"time"
 	"net/http"
 	"encoding/json"
-	//"github.com/google/uuid"
-	//"Chirpy/internal/database"
+	"github.com/google/uuid"
+	"Chirpy/internal/database"
 )
 
 func health(w http.ResponseWriter, req *http.Request) {
@@ -21,6 +22,13 @@ a Content-Type: text/plain; charset=utf-8 header, and the body will contain a
 message that simply says "OK" (the text associated with the 200 status code).
 */
 
+func returnError(w http.ResponseWriter, errHeader int, errMessage string, err error) {
+	w.Header().Set("Content-Type", "text/html; charset=utf-8") // normal header
+	w.WriteHeader(errHeader)
+	w.Write([]byte(errMessage))
+	log.Printf("%s: %s", errMessage, err)
+	return
+}
 
 func (cfg *apiConfig) metrics(w http.ResponseWriter, req *http.Request) {
 	//stat1 := fmt.Sprintf("Hits: %d", cfg.fileserverHits.Load())
@@ -61,53 +69,55 @@ func (cfg *apiConfig) reset(w http.ResponseWriter, req *http.Request) {
 
 }
 
-func (cfg *apiConfig) validate_Chirp(w http.ResponseWriter, req *http.Request) {
+func (cfg *apiConfig) addChirp(w http.ResponseWriter, req *http.Request) {
     type parameters struct {
-        // these tags indicate how the keys in the JSON should be mapped to the struct fields
-        // the struct fields must be exported (start with a capital letter) if you want them parsed
         Body string `json:"body"`
+        User_id uuid.UUID `json:"user_id"`
     }
  	type returnVals struct {
-        // the key will be the name of struct field unless you give it an explicit JSON tag
-        Err string `json:"error"`
-        Valid bool `json:"valid"`
-        Cleaned_body string `json:"cleaned_body"`
+        ID uuid.UUID `json:"id"`
+		CreatedAt time.Time `json:"created_at"`
+		UpdatedAt time.Time `json:"updated_at"`
+		Body string `json:"body"`
+		UserID uuid.UUID `json:"user_id"`
     }
 
     w.Header().Set("Content-Type", "application/json")
-    header := 404
     params := parameters{}
     returns := returnVals{}
 
     decoder := json.NewDecoder(req.Body)
     err := decoder.Decode(&params)
     if err != nil {
-        // an error will be thrown if the JSON is invalid or has the wrong types
-        // any missing fields will simply have their values in the struct set to their zero value
-		returns.Err = "Something went wrong"
-		returns.Valid = false
-		returns.Cleaned_body = ""
-		header = 500
+   		returnError(w, 500, "unable to decode parameters", err)
+   		return
     }
-    if err == nil {
-    	if len(params.Body) > 140 {
-    		header = 400
-    		returns.Err = "Chirp is too long"
-    		returns.Valid = false
-    		returns.Cleaned_body = ""
-    	} else {
-    		header = 200
-    		returns.Valid = true
-    		returns.Cleaned_body = cleanString(params.Body)
-    	}
-    }
+
+   	if len(params.Body) > 140 {
+   		returnError(w, 400, "Chirp is too long", nil)
+   		return
+   	}
+
+   	chirpParams := database.CreateChirpParams{cleanString(params.Body), params.User_id}
+   	log.Printf("Body: %s, user_id: %s", chirpParams.Body, chirpParams.UserID)
+   	chirp, err := cfg.dbQueries.CreateChirp(req.Context(), chirpParams)
+   	if err != nil {
+   		returnError(w, 500, "Chirp not saved", err)
+   		return
+   	}
+
+   	returns.ID = chirp.ID
+   	returns.CreatedAt = chirp.CreatedAt
+   	returns.UpdatedAt = chirp.UpdatedAt
+   	returns.Body = chirp.Body
+   	returns.UserID = chirp.UserID
 
     dat, err := json.Marshal(returns)
 	if err != nil {
-			dat, _ = json.Marshal(returnVals{fmt.Sprintf("Error marshalling JSON: %s", err), false, ""})
-			header = 500 
+			returnError(w, 500, "Error marshalling JSON", err)
+			return
 	}
-	w.WriteHeader(header)
+	w.WriteHeader(201)
     w.Write(dat)
 
 }
