@@ -34,8 +34,9 @@ func main() {
 	serveMux.HandleFunc("GET /admin/metrics", apiCfg.metrics) //show the server statistics
 	serveMux.HandleFunc("POST /admin/reset", apiCfg.reset) //reset metrics
 	serveMux.HandleFunc("POST /api/users", apiCfg.addUser) //add a Chirp user based on e-mail
-	serveMux.HandleFunc("POST /api/chirps", apiCfg.addChirp) //add a Chirp user based on e-mail
-	serveMux.HandleFunc("GET /api/chirps", apiCfg.getChirps) //add a Chirp user based on e-mail
+	serveMux.HandleFunc("POST /api/chirps", apiCfg.addChirp) //add a Chirp
+	serveMux.HandleFunc("GET /api/chirps", apiCfg.getChirps) //fetch all chirps
+	serveMux.HandleFunc("GET /api/chirps/{chirpID}", apiCfg.getChirp) //fetch one chirp by ID
 
 	server := &http.Server{
 		Addr: ":" + port, //they used a constant for the port, this may be required at some point.

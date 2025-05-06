@@ -42,18 +42,12 @@ func (cfg *apiConfig) metrics(w http.ResponseWriter, req *http.Request) {
 
 func (cfg *apiConfig) reset(w http.ResponseWriter, req *http.Request) {
 	if cfg.platform != "dev" {
-		w.Header().Set("Content-Type", "text/html; charset=utf-8") // normal header
-		w.WriteHeader(403)
-		w.Write([]byte("Forbidden"))
-		log.Printf("Non Dev call to reset system")
+		returnError(w, 403, "Forbidden", fmt.Errorf("Non Dev call to reset system"))
 		return
 	}
 	err := cfg.dbQueries.DeleteUsers(req.Context())
 	if err != nil {
-		w.Header().Set("Content-Type", "text/html; charset=utf-8") // normal header
-		w.WriteHeader(500)
-		w.Write([]byte("error: Unable to reset user table"))
-		log.Printf("Unable to remove users error: %s", err)
+		returnError(w, 500, "error: Unable to reset user table", err)
 		return
 	}
 	cfg.fileserverHits.Store(0)
@@ -135,20 +129,14 @@ func (cfg *apiConfig) addUser(w http.ResponseWriter, req *http.Request) {
     decoder := json.NewDecoder(req.Body)
     err := decoder.Decode(&params)
     if err != nil {
-		w.Header().Set("Content-Type", "text/html; charset=utf-8") // normal header
-		w.WriteHeader(500)
-		w.Write([]byte("error decoding Add User Request Parameters"))
-		log.Printf("error decoding Add User Request: %s", err)
+		returnError(w, 500, "error decoding Add User Request Parameters", err)
 		return
     }
 
     //create user here using params.Email
     dbUser, err := cfg.dbQueries.CreateUser(req.Context(), params.Email)
 	if err != nil {
-		w.Header().Set("Content-Type", "text/html; charset=utf-8") // normal header
-		w.WriteHeader(500)
-		w.Write([]byte("error: Unable to add user"))
-		log.Printf("Unable to add user error: %s", err)
+		returnError(w, 500, "error: Unable to add user", err)
 		return
 	}
 
@@ -160,10 +148,7 @@ func (cfg *apiConfig) addUser(w http.ResponseWriter, req *http.Request) {
     //formulate reply here
     dat, err := json.Marshal(returns)
 	if err != nil {
-		w.Header().Set("Content-Type", "text/html; charset=utf-8") // normal header
-		w.WriteHeader(500)
-		w.Write([]byte("Error marshalling JSON"))
-		log.Printf("Error marshalling JSON: %s", err)
+		returnError(w, 500, "Error marshalling JSON", err)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
@@ -198,6 +183,46 @@ func (cfg *apiConfig) getChirps(w http.ResponseWriter, req *http.Request) {
 	}
 
     dat, err := json.Marshal(returnChirps)
+	if err != nil {
+		returnError(w, 500, "Error marshalling JSON", err)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+    w.Write(dat)
+}
+
+func (cfg *apiConfig) getChirp(w http.ResponseWriter, req *http.Request) {
+	type chirp struct {
+        ID uuid.UUID `json:"id"`
+		CreatedAt time.Time `json:"created_at"`
+		UpdatedAt time.Time `json:"updated_at"`
+		Body string `json:"body"`
+		UserID uuid.UUID `json:"user_id"`
+	}
+
+	//get ID from path
+	id, err := uuid.Parse(req.PathValue("chirpID"))
+	if err != nil {
+		returnError(w, 500, "Invalid ID format", err)
+		return
+	}
+
+	//execute db query to fetch chirp.
+	fetchedChirp, err := cfg.dbQueries.GetChirp(req.Context(), id)
+	if err != nil {
+		returnError(w, 404, "Chirp does not exist", err)
+		return
+	}
+
+	newChirp := chirp{}
+	newChirp.ID = fetchedChirp.ID
+	newChirp.CreatedAt = fetchedChirp.CreatedAt
+	newChirp.UpdatedAt = fetchedChirp.UpdatedAt
+	newChirp.Body = fetchedChirp.Body
+	newChirp.UserID = fetchedChirp.UserID
+
+    dat, err := json.Marshal(newChirp)
 	if err != nil {
 		returnError(w, 500, "Error marshalling JSON", err)
 		return
