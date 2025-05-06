@@ -169,7 +169,40 @@ func (cfg *apiConfig) addUser(w http.ResponseWriter, req *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(201)
     w.Write(dat)
+}
 
+func (cfg *apiConfig) getChirps(w http.ResponseWriter, req *http.Request) {
+	type chirp struct {
+        ID uuid.UUID `json:"id"`
+		CreatedAt time.Time `json:"created_at"`
+		UpdatedAt time.Time `json:"updated_at"`
+		Body string `json:"body"`
+		UserID uuid.UUID `json:"user_id"`
+	}
 
+	fetchedChirps, err := cfg.dbQueries.GetChirps(req.Context())
+	if err != nil {
+		returnError(w, 500, "unable to fetch Chirps", err)
+		return
+	}
+	returnChirps := []chirp{}
 
+	for _, fetchedChirp := range fetchedChirps {
+		newChirp := chirp{}
+		newChirp.ID = fetchedChirp.ID
+   		newChirp.CreatedAt = fetchedChirp.CreatedAt
+		newChirp.UpdatedAt = fetchedChirp.UpdatedAt
+		newChirp.Body = fetchedChirp.Body
+		newChirp.UserID = fetchedChirp.UserID
+		returnChirps = append(returnChirps, newChirp)
+	}
+
+    dat, err := json.Marshal(returnChirps)
+	if err != nil {
+		returnError(w, 500, "Error marshalling JSON", err)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+    w.Write(dat)
 }
