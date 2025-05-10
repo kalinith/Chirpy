@@ -8,6 +8,7 @@ import(
 	"encoding/json"
 	"github.com/google/uuid"
 	"Chirpy/internal/database"
+	"Chirpy/internal/auth"
 )
 
 func health(w http.ResponseWriter, req *http.Request) {
@@ -121,6 +122,7 @@ func (cfg *apiConfig) addUser(w http.ResponseWriter, req *http.Request) {
         // these tags indicate how the keys in the JSON should be mapped to the struct fields
         // the struct fields must be exported (start with a capital letter) if you want them parsed
 		Email string `json:"email"`
+		Password string `json:"password"`
 	}
 
     params := parameters{}
@@ -132,9 +134,15 @@ func (cfg *apiConfig) addUser(w http.ResponseWriter, req *http.Request) {
 		returnError(w, 500, "error decoding Add User Request Parameters", err)
 		return
     }
+    hashpassword, err := auth.HashPassword(params.Password)
+    if err != nil {
+    	returnError(w, 500, "error encrypting password", err)
+    }
 
-    //create user here using params.Email
-    dbUser, err := cfg.dbQueries.CreateUser(req.Context(), params.Email)
+    dbparam := database.CreateUserParams{}
+    dbparam.Email = params.Email
+    dbparam.HashedPassword = hashpassword
+    dbUser, err := cfg.dbQueries.CreateUser(req.Context(), dbparam)
 	if err != nil {
 		returnError(w, 500, "error: Unable to add user", err)
 		return
@@ -223,6 +231,49 @@ func (cfg *apiConfig) getChirp(w http.ResponseWriter, req *http.Request) {
 	newChirp.UserID = fetchedChirp.UserID
 
     dat, err := json.Marshal(newChirp)
+	if err != nil {
+		returnError(w, 500, "Error marshalling JSON", err)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+    w.Write(dat)
+}
+
+func (cfg *apiConfig) login(w http.ResponseWriter, req *http.Request) {
+	params := struct {
+ 		Password string	`json:"password"`
+  		Email 	 string	`json:"email"`
+	}{}
+    
+    decoder := json.NewDecoder(req.Body)
+    err := decoder.Decode(&params)
+    if err != nil {
+		returnError(w, 500, "Invalid json parameters", err)
+		return
+    }
+
+    //fetch the users hash
+    dbUser := database.User{}
+    dbUser, err = cfg.dbQueries.GetUser(req.Context(), params.Email)
+    if err != nil {
+    	returnError(w, 401, "Incorrect email or password", err)
+    }
+    //check password against hash
+    err = auth.CheckPasswordHash(dbUser.HashedPassword, params.Password)
+    if err != nil {
+    	returnError(w, 401, "Incorrect email or password", err)
+    }
+
+    //in a future lesson assign token here
+	returns := User{}
+ 	returns.ID = dbUser.ID
+	returns.CreatedAt = dbUser.CreatedAt
+	returns.UpdatedAt = dbUser.UpdatedAt
+	returns.Email = dbUser.Email
+
+    //formulate reply here
+    dat, err := json.Marshal(returns)
 	if err != nil {
 		returnError(w, 500, "Error marshalling JSON", err)
 		return

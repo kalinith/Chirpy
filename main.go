@@ -37,7 +37,8 @@ func main() {
 	serveMux.HandleFunc("POST /api/chirps", apiCfg.addChirp) //add a Chirp
 	serveMux.HandleFunc("GET /api/chirps", apiCfg.getChirps) //fetch all chirps
 	serveMux.HandleFunc("GET /api/chirps/{chirpID}", apiCfg.getChirp) //fetch one chirp by ID
-
+	serveMux.HandleFunc("POST /api/login", apiCfg.login)//login user will eventually return a token.
+	
 	server := &http.Server{
 		Addr: ":" + port, //they used a constant for the port, this may be required at some point.
 		Handler: serveMux,
