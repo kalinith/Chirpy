@@ -1,5 +1,9 @@
 package auth
-import "testing"
+import (
+	"testing"
+	"time"
+	"github.com/google/uuid"
+)
 
 func TestHashing(t *testing.T) {
 	cases := []struct {
@@ -42,4 +46,44 @@ func TestHashing(t *testing.T) {
 		}
 	}
 
+}
+
+func TestJWTCreationAndValidation(t *testing.T) {
+    // Create a random UUID
+    userID := uuid.New()
+    tokenSecret := "test-secret"
+    
+    // Test case 1: Valid token
+    token, err := MakeJWT(userID, tokenSecret, time.Hour)
+    if err != nil {
+        t.Fatalf("Failed to create token: %v", err)
+    }
+    
+    // Validate the token
+    extractedID, err := ValidateJWT(token, tokenSecret)
+    if err != nil {
+        t.Fatalf("Failed to validate token: %v", err)
+    }
+    
+    if extractedID != userID {
+        t.Errorf("User ID mismatch. Got %v, want %v", extractedID, userID)
+    }
+    
+    // Test case 2: Expired token
+    expiredToken, err := MakeJWT(userID, tokenSecret, -time.Hour) // Expired 1 hour ago
+    if err != nil {
+        t.Fatalf("Failed to create expired token: %v", err)
+    }
+    
+    _, err = ValidateJWT(expiredToken, tokenSecret)
+    if err == nil {
+        t.Error("Expected error for expired token, got nil")
+    }
+    
+    // Test case 3: Wrong secret
+    wrongSecret := "wrong-secret"
+    _, err = ValidateJWT(token, wrongSecret)
+    if err == nil {
+        t.Error("Expected error for token with wrong secret, got nil")
+    }
 }
