@@ -2,6 +2,7 @@ package auth
 import (
 	"testing"
 	"time"
+    "net/http"
 	"github.com/google/uuid"
 )
 
@@ -12,25 +13,24 @@ func TestHashing(t *testing.T) {
 		{
 			input:    "hello world",
 		},
-                {
-                        input:    "This is a test",
-                },
-                {
-                        input:    "the Quick brown Fox",
-                },
-                {
-                        input:    "jumped over the lazy dog",
-                },
-                {
-                        input:    "Uno Duo Tres Quatro Sinco sinco ses",
-                },
-                {
-                        input:    "thisisareallylongsentancewithnospaces",
-                },
-                {
-                        input:    "oh",
-                },
-		// add more cases here
+        {
+                input:    "This is a test",
+        },
+        {
+                input:    "the Quick brown Fox",
+        },
+        {
+                input:    "jumped over the lazy dog",
+        },
+        {
+                input:    "Uno Duo Tres Quatro Sinco sinco ses",
+        },
+        {
+                input:    "thisisareallylongsentancewithnospaces",
+        },
+        {
+                input:    "oh",
+        },
 	}
 
 	for _, c := range cases {
@@ -85,5 +85,49 @@ func TestJWTCreationAndValidation(t *testing.T) {
     _, err = ValidateJWT(token, wrongSecret)
     if err == nil {
         t.Error("Expected error for token with wrong secret, got nil")
+    }
+}
+
+func TestGetBearerToken(t *testing.T) {
+
+
+
+    cases := []struct {
+        token   string
+    }{
+        {
+            token:    "4QCG7TK3LTLJU4GGLNEPAY06IJPGB35RG6SQIUMFNT88KZKJAC7T39E98PEVS1DW",
+        },
+        {
+                token:    "Y853OQWUQBPCNGA86THI896918AWS9CZ3L4UMIADXLR2J5GJBS28XCM7JFYM8DM2",
+        },
+        {
+                token:    "28FQ7I3INXXNM0ZOW9C32DMZ88UKTIPSZ2ONA1BMO6TDIQ2EE4PLURCWXC9F0MLB",
+        },
+        {
+                token:    "S37AON7ILEQJLZQKRCOEYXBTOXBNNJWEIL9ZDSETOAHGL3ABW5C4YP6T88WYTNDZ",
+        },
+        {
+                token:    "KUW0SHNNLZKEVY182S4RYGD91JYCWB7O5EAF7KPA6BFPLPCGOT896KUKOQX5FPRO",
+        },
+        {
+                token:    "thisisareallylongsentancewithnospaces",
+        },
+        {
+                token:    "oh",
+        },
+    }
+
+    for _, c := range cases {
+        headertest := http.Header{}
+        bearer := "bearer " + c.token
+        headertest.Add("Authorization", bearer)
+        token, err := GetBearerToken(headertest)
+        if err != nil {
+            t.Fatalf("Failed to split token(%s): %s",bearer, err)
+        }
+        if c.token != token {
+            t.Fatalf("returned token(%s) does not equal starting token(%s)\n%s", token, c.token, bearer)
+        }
     }
 }

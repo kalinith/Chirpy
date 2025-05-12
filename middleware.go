@@ -13,6 +13,7 @@ import(
 type apiConfig struct {
 	fileserverHits atomic.Int32
 	dbQueries *database.Queries
+	jwt_Secret string
 	platform string
 }
 
@@ -21,6 +22,7 @@ type User struct {
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 	Email     string    `json:"email"`
+	Token	  string	`json:"token"`
 }
 
 func (cfg *apiConfig) middlewareMetricsInc(next http.Handler) http.Handler {

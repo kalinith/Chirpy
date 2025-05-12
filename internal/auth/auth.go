@@ -3,6 +3,8 @@ import(
 	"fmt"
 	"log"
 	"time"
+	"strings"
+	"net/http"
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 	"github.com/golang-jwt/jwt/v5"
@@ -86,4 +88,17 @@ func ValidateJWT(tokenString, tokenSecret string) (uuid.UUID, error) {
     }
     
     return uuid.Nil, fmt.Errorf("invalid token")
+}
+
+
+func GetBearerToken(headers http.Header) (string, error) {
+	authorization := headers.Get("Authorization")
+	if authorization == "" {
+		return "", fmt.Errorf("Auth Token missing")
+	}
+	bearer := strings.Split(authorization, " ")
+	if len(bearer) > 2 {
+		return "", fmt.Errorf("invalid Auth Token format")
+	}
+	return string(bearer[1]), nil
 }

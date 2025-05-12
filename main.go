@@ -18,6 +18,7 @@ func main() {
 	apiCfg.fileserverHits.Store(int32(0))
 	dbURL := os.Getenv("DB_URL")
 	apiCfg.platform = os.Getenv("PLATFORM")
+	apiCfg.jwt_Secret = os.Getenv("JWT_SECRET")
 	
 	db, err := sql.Open("postgres", dbURL)
 	if err != nil {
@@ -38,7 +39,7 @@ func main() {
 	serveMux.HandleFunc("GET /api/chirps", apiCfg.getChirps) //fetch all chirps
 	serveMux.HandleFunc("GET /api/chirps/{chirpID}", apiCfg.getChirp) //fetch one chirp by ID
 	serveMux.HandleFunc("POST /api/login", apiCfg.login)//login user will eventually return a token.
-	
+
 	server := &http.Server{
 		Addr: ":" + port, //they used a constant for the port, this may be required at some point.
 		Handler: serveMux,

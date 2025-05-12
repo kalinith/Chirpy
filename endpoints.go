@@ -67,7 +67,7 @@ func (cfg *apiConfig) reset(w http.ResponseWriter, req *http.Request) {
 func (cfg *apiConfig) addChirp(w http.ResponseWriter, req *http.Request) {
     type parameters struct {
         Body string `json:"body"`
-        User_id uuid.UUID `json:"user_id"`
+        //User_id uuid.UUID `json:"user_id"`
     }
  	type returnVals struct {
         ID uuid.UUID `json:"id"`
@@ -75,6 +75,16 @@ func (cfg *apiConfig) addChirp(w http.ResponseWriter, req *http.Request) {
 		UpdatedAt time.Time `json:"updated_at"`
 		Body string `json:"body"`
 		UserID uuid.UUID `json:"user_id"`
+    }
+
+    tokenString, tokenErr := auth.GetBearerToken(req.Header)
+    if tokenErr != nil {
+    	returnError(w, 401, "Unauthorized", tokenErr)
+    }
+
+    userID, validErr := auth.ValidateJWT(tokenString, cfg.jwt_Secret)
+    if validErr != nil {
+    	returnError(w, 401, "Unauthorized", validErr)
     }
 
     w.Header().Set("Content-Type", "application/json")
@@ -93,7 +103,7 @@ func (cfg *apiConfig) addChirp(w http.ResponseWriter, req *http.Request) {
    		return
    	}
 
-   	chirpParams := database.CreateChirpParams{cleanString(params.Body), params.User_id}
+   	chirpParams := database.CreateChirpParams{cleanString(params.Body), userID}
    	log.Printf("Body: %s, user_id: %s", chirpParams.Body, chirpParams.UserID)
    	chirp, err := cfg.dbQueries.CreateChirp(req.Context(), chirpParams)
    	if err != nil {
@@ -244,6 +254,7 @@ func (cfg *apiConfig) login(w http.ResponseWriter, req *http.Request) {
 	params := struct {
  		Password string	`json:"password"`
   		Email 	 string	`json:"email"`
+  		Expires_In_Seconds int `json:"expires_in_seconds"`
 	}{}
     
     decoder := json.NewDecoder(req.Body)
@@ -251,6 +262,12 @@ func (cfg *apiConfig) login(w http.ResponseWriter, req *http.Request) {
     if err != nil {
 		returnError(w, 500, "Invalid json parameters", err)
 		return
+    }
+    expiresIn, _ := time.ParseDuration("3600s")
+
+    expiry, expErr := time.ParseDuration(string(params.Expires_In_Seconds) + "s")
+    if expErr == nil {
+    	expiresIn = expiry
     }
 
     //fetch the users hash
@@ -265,12 +282,18 @@ func (cfg *apiConfig) login(w http.ResponseWriter, req *http.Request) {
     	returnError(w, 401, "Incorrect email or password", err)
     }
 
-    //in a future lesson assign token here
+    //Generate token from data
+	token, tokenErr := auth.MakeJWT(dbUser.ID, cfg.jwt_Secret, expiresIn)
+	if tokenErr != nil {
+		returnError(w, 500, "failed to generate token", err)
+	}
+
 	returns := User{}
  	returns.ID = dbUser.ID
 	returns.CreatedAt = dbUser.CreatedAt
 	returns.UpdatedAt = dbUser.UpdatedAt
 	returns.Email = dbUser.Email
+	returns.Token = token
 
     //formulate reply here
     dat, err := json.Marshal(returns)
