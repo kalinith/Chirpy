@@ -104,7 +104,7 @@ func (cfg *apiConfig) addChirp(w http.ResponseWriter, req *http.Request) {
    	}
 
    	chirpParams := database.CreateChirpParams{cleanString(params.Body), userID}
-   	log.Printf("Body: %s, user_id: %s", chirpParams.Body, chirpParams.UserID)
+   	//log.Printf("Body: %s, user_id: %s", chirpParams.Body, chirpParams.UserID)
    	chirp, err := cfg.dbQueries.CreateChirp(req.Context(), chirpParams)
    	if err != nil {
    		returnError(w, 500, "Chirp not saved", err)
@@ -254,7 +254,6 @@ func (cfg *apiConfig) login(w http.ResponseWriter, req *http.Request) {
 	params := struct {
  		Password string	`json:"password"`
   		Email 	 string	`json:"email"`
-  		Expires_In_Seconds int `json:"expires_in_seconds"`
 	}{}
     
     decoder := json.NewDecoder(req.Body)
@@ -263,12 +262,7 @@ func (cfg *apiConfig) login(w http.ResponseWriter, req *http.Request) {
 		returnError(w, 500, "Invalid json parameters", err)
 		return
     }
-    expiresIn, _ := time.ParseDuration("3600s")
 
-    expiry, expErr := time.ParseDuration(string(params.Expires_In_Seconds) + "s")
-    if expErr == nil {
-    	expiresIn = expiry
-    }
 
     //fetch the users hash
     dbUser := database.User{}
@@ -282,8 +276,22 @@ func (cfg *apiConfig) login(w http.ResponseWriter, req *http.Request) {
     	returnError(w, 401, "Incorrect email or password", err)
     }
 
-    //Generate token from data
-	token, tokenErr := auth.MakeJWT(dbUser.ID, cfg.jwt_Secret, expiresIn)
+    //Generate Refresh Token
+	utcTime := time.Now().UTC()
+	expiresIn, _ := time.ParseDuration("60d")
+	expiresAt := utcTime.Add(expiresIn)
+	refreshToken, _ := auth.MakeRefreshToken()
+
+	//insert into table for client.
+	refreshTokenParams := database.CreateRefreshTokenParams{refreshToken, dbUser.ID, expiresAt}
+	refreshTokenRecord, qryErr := cfg.dbQueries.CreateRefreshToken(req.Context(), refreshTokenParams)
+	if qryErr != nil {
+		returnError(w, 500, "failed to save refreshToken", qryErr)
+		return
+	}
+
+    //Generate Access token from data
+	token, tokenErr := auth.MakeJWT(dbUser.ID, cfg.jwt_Secret)
 	if tokenErr != nil {
 		returnError(w, 500, "failed to generate token", err)
 	}
@@ -294,6 +302,7 @@ func (cfg *apiConfig) login(w http.ResponseWriter, req *http.Request) {
 	returns.UpdatedAt = dbUser.UpdatedAt
 	returns.Email = dbUser.Email
 	returns.Token = token
+	returns.RefreshToken = refreshTokenRecord.Token
 
     //formulate reply here
     dat, err := json.Marshal(returns)
@@ -304,4 +313,57 @@ func (cfg *apiConfig) login(w http.ResponseWriter, req *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(200)
     w.Write(dat)
+}
+
+func (cfg *apiConfig) refresh(w http.ResponseWriter, req *http.Request) {
+	bearerToken, err := auth.GetBearerToken(req.Header)
+	if err != nil {
+		returnError(w, 401, "Invalid or expired token", err)
+		return
+	}
+	
+	RefreshToken, err := cfg.dbQueries.GetToken(req.Context(), bearerToken)
+	if err != nil {
+		returnError(w, 401, "Invalid or expired token", err)
+		return
+	}
+
+	if RefreshToken.RevokedAt.Valid {  // Assuming RevokedAt is a sql.NullTime
+		returnError(w, 401, "Invalid or expired token", err)
+		return
+	}
+	
+
+	//Generate New Access token from user ID
+	returns := struct {
+		Token string `json:"token"`
+	}{}
+
+	returns.Token, err = auth.MakeJWT(RefreshToken.UserID, cfg.jwt_Secret)
+	if err != nil {
+		returnError(w, 500, "failed to generate token", err)
+	}
+
+	//formulate reply here
+    dat, err := json.Marshal(returns)
+	if err != nil {
+		returnError(w, 500, "Error marshalling JSON", err)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+    w.Write(dat)
+
+}
+
+func (cfg *apiConfig) revoke(w http.ResponseWriter, req *http.Request) {
+
+	bearerToken, err := auth.GetBearerToken(req.Header)
+	if err != nil {
+		returnError(w, 401, "Invalid or expired token", err)
+		return
+	}
+	
+	_ = cfg.dbQueries.RevokeToken(req.Context(), bearerToken)
+	w.WriteHeader(204)
 }

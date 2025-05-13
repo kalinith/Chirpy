@@ -5,11 +5,12 @@ import(
 	"time"
 	"strings"
 	"net/http"
+	"crypto/rand"
+	"encoding/hex"
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 	"github.com/golang-jwt/jwt/v5"
 )
-
 
 func HashPassword(password string) (string, error) {
 	// Hash the password using the bcrypt.GenerateFromPassword function. Bcrypt
@@ -43,8 +44,9 @@ func CheckPasswordHash(hash, password string) error{
 	return bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
 }
 
-func MakeJWT(userID uuid.UUID, tokenSecret string, expiresIn time.Duration) (string, error) {
+func MakeJWT(userID uuid.UUID, tokenSecret string) (string, error) {
 	utcTime := time.Now().UTC()
+	expiresIn, _ := time.ParseDuration("1h")
 	expireTime := utcTime.Add(expiresIn)
 	claims := jwt.RegisteredClaims{
 		Issuer: "chirpy",
@@ -90,7 +92,6 @@ func ValidateJWT(tokenString, tokenSecret string) (uuid.UUID, error) {
     return uuid.Nil, fmt.Errorf("invalid token")
 }
 
-
 func GetBearerToken(headers http.Header) (string, error) {
 	authorization := headers.Get("Authorization")
 	if authorization == "" {
@@ -101,4 +102,10 @@ func GetBearerToken(headers http.Header) (string, error) {
 		return "", fmt.Errorf("invalid Auth Token format")
 	}
 	return string(bearer[1]), nil
+}
+
+func MakeRefreshToken() (string, error) {
+	bytestring := make([]byte, 32)
+	rand.Read(bytestring)
+	return hex.EncodeToString(bytestring), nil
 }
