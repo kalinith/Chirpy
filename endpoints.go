@@ -431,3 +431,53 @@ func (cfg *apiConfig) passwordUpdate(w http.ResponseWriter, req *http.Request) {
 	w.WriteHeader(200)
     w.Write(dat)   
 }
+
+
+func (cfg *apiConfig) deleteChirp(w http.ResponseWriter, req *http.Request) {
+	//First check that the auth token in the header is valid
+	bearerToken, err := auth.GetBearerToken(req.Header)
+	if err != nil {
+		returnError(w, 401, "Invalid token", err)
+		return
+	}
+
+	userID, err := auth.ValidateJWT(bearerToken, cfg.jwt_Secret)
+	if err != nil {
+		returnError(w, 401, "Invalid token", err)
+		return
+	}
+
+	//get ID from path
+	id, err := uuid.Parse(req.PathValue("chirpID"))
+	if err != nil {
+		returnError(w, 500, "Invalid ID format", err)
+		return
+	}
+
+	type chirp struct {
+        ID uuid.UUID `json:"id"`
+		CreatedAt time.Time `json:"created_at"`
+		UpdatedAt time.Time `json:"updated_at"`
+		Body string `json:"body"`
+		UserID uuid.UUID `json:"user_id"`
+	}
+
+	//execute db query to fetch chirp.
+	fetchedChirp, err := cfg.dbQueries.GetChirp(req.Context(), id)
+	if err != nil {
+		returnError(w, 404, "Chirp does not exist", err)
+		return
+	}
+
+	if userID != fetchedChirp.UserID {
+		returnError(w, 403, "Unauthorized", nil)
+		return
+	}
+
+	err = cfg.dbQueries.DeleteChirp(req.Context(), id)
+	if err != nil {
+		returnError(w, 403, "Unauthorized", nil)
+		return
+	}
+	w.WriteHeader(204)
+}

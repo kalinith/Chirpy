@@ -42,6 +42,7 @@ func main() {
 	serveMux.HandleFunc("POST /api/refresh", apiCfg.refresh)//Refresh the access token.
 	serveMux.HandleFunc("POST /api/revoke", apiCfg.revoke)//revoke refresh token
 	serveMux.HandleFunc("PUT /api/users", apiCfg.passwordUpdate)//revoke refresh token
+	serveMux.HandleFunc("DELETE /api/chirps/{chirpID}", apiCfg.deleteChirp)//Allow a user to delete a Chirp he owns
 
 	server := &http.Server{
 		Addr: ":" + port, //they used a constant for the port, this may be required at some point.
