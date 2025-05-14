@@ -80,11 +80,13 @@ func (cfg *apiConfig) addChirp(w http.ResponseWriter, req *http.Request) {
     tokenString, tokenErr := auth.GetBearerToken(req.Header)
     if tokenErr != nil {
     	returnError(w, 401, "Unauthorized", tokenErr)
+    	return
     }
 
     userID, validErr := auth.ValidateJWT(tokenString, cfg.jwt_Secret)
     if validErr != nil {
     	returnError(w, 401, "Unauthorized", validErr)
+    	return
     }
 
     w.Header().Set("Content-Type", "application/json")
@@ -147,6 +149,7 @@ func (cfg *apiConfig) addUser(w http.ResponseWriter, req *http.Request) {
     hashpassword, err := auth.HashPassword(params.Password)
     if err != nil {
     	returnError(w, 500, "error encrypting password", err)
+    	return
     }
 
     dbparam := database.CreateUserParams{}
@@ -294,6 +297,7 @@ func (cfg *apiConfig) login(w http.ResponseWriter, req *http.Request) {
 	token, tokenErr := auth.MakeJWT(dbUser.ID, cfg.jwt_Secret)
 	if tokenErr != nil {
 		returnError(w, 500, "failed to generate token", err)
+		return
 	}
 
 	returns := User{}
@@ -342,6 +346,7 @@ func (cfg *apiConfig) refresh(w http.ResponseWriter, req *http.Request) {
 	returns.Token, err = auth.MakeJWT(RefreshToken.UserID, cfg.jwt_Secret)
 	if err != nil {
 		returnError(w, 500, "failed to generate token", err)
+		return
 	}
 
 	//formulate reply here
@@ -357,7 +362,6 @@ func (cfg *apiConfig) refresh(w http.ResponseWriter, req *http.Request) {
 }
 
 func (cfg *apiConfig) revoke(w http.ResponseWriter, req *http.Request) {
-
 	bearerToken, err := auth.GetBearerToken(req.Header)
 	if err != nil {
 		returnError(w, 401, "Invalid or expired token", err)
@@ -366,4 +370,64 @@ func (cfg *apiConfig) revoke(w http.ResponseWriter, req *http.Request) {
 	
 	_ = cfg.dbQueries.RevokeToken(req.Context(), bearerToken)
 	w.WriteHeader(204)
+}
+
+func (cfg *apiConfig) passwordUpdate(w http.ResponseWriter, req *http.Request) {
+	//First check that the auth token in the header is valid
+	bearerToken, err := auth.GetBearerToken(req.Header)
+	if err != nil {
+		returnError(w, 401, "Invalid token", err)
+		return
+	}
+
+	userID, err := auth.ValidateJWT(bearerToken, cfg.jwt_Secret)
+	if err != nil {
+		returnError(w, 401, "Invalid token", err)
+		return
+	}
+
+	//pull the parameters from the request body
+	params := struct {
+ 		Password string	`json:"password"` //the new password for the client
+  		Email 	 string	`json:"email"` //the new e-mail address for the client
+	}{}
+    
+    decoder := json.NewDecoder(req.Body)
+    err = decoder.Decode(&params)
+    if err != nil {
+		returnError(w, 500, "Invalid json parameters", err)
+		return
+    }
+
+    //configure parameterd for user update    
+    userParam := database.UpdateUserParams{}
+    userParam.ID = userID
+    userParam.Email = params.Email
+    userParam.HashedPassword, err = auth.HashPassword(params.Password)//has the password before saving it
+    if err != nil {
+    	returnError(w, 401, "Incorrect email address", err)
+    	return
+    }
+
+    //update username and password
+    dbuser, err := cfg.dbQueries.UpdateUser(req.Context(), userParam)
+    if err != nil {
+    	returnError(w, 401, "not able to update user", err)
+    	return
+    }
+
+	returns := User{}
+ 	returns.ID = dbuser.ID
+	returns.CreatedAt = dbuser.CreatedAt
+	returns.UpdatedAt = dbuser.UpdatedAt
+	returns.Email = dbuser.Email
+
+    dat, err := json.Marshal(returns)
+	if err != nil {
+		returnError(w, 500, "Error marshalling JSON", err)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+    w.Write(dat)   
 }
