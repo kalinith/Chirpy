@@ -1,7 +1,7 @@
--- goose+ up
+-- +goose up
 ALTER TABLE users
-	ADD COLUMN is_chirpy_red bool default false;
+	ADD COLUMN is_chirpy_red bool default false not null;
 
--- goose+ down
+-- +goose down
 ALTER TABLE users
 	DROP COLUMN is_chirpy_red;
