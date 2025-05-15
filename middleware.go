@@ -24,7 +24,7 @@ type User struct {
 	Email			string    `json:"email"`
 	Token			string	  `json:"token"`
 	RefreshToken	string    `json:"refresh_token"`
-	isChirpRed		bool	  `json:"is_chirp_red"`
+	IsChirpyRed		bool	  `json:"is_chirpy_red"`
 }
 
 func (cfg *apiConfig) middlewareMetricsInc(next http.Handler) http.Handler {

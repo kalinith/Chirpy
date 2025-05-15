@@ -165,7 +165,7 @@ func (cfg *apiConfig) addUser(w http.ResponseWriter, req *http.Request) {
 	returns.CreatedAt = dbUser.CreatedAt
 	returns.UpdatedAt = dbUser.UpdatedAt
 	returns.Email = dbUser.Email
-	returns.isChirpRed = dbUser.isChirpRed
+	returns.IsChirpyRed = dbUser.IsChirpyRed
 
     //formulate reply here
     dat, err := json.Marshal(returns)
@@ -308,7 +308,7 @@ func (cfg *apiConfig) login(w http.ResponseWriter, req *http.Request) {
 	returns.Email = dbUser.Email
 	returns.Token = token
 	returns.RefreshToken = refreshTokenRecord.Token
-	returns.isChirpRed = dbUser.isChirpRed
+	returns.IsChirpyRed = dbUser.IsChirpyRed
 
     //formulate reply here
     dat, err := json.Marshal(returns)
@@ -412,18 +412,18 @@ func (cfg *apiConfig) passwordUpdate(w http.ResponseWriter, req *http.Request) {
     }
 
     //update username and password
-    dbuser, err := cfg.dbQueries.UpdateUser(req.Context(), userParam)
+    dbUser, err := cfg.dbQueries.UpdateUser(req.Context(), userParam)
     if err != nil {
     	returnError(w, 401, "not able to update user", err)
     	return
     }
 
 	returns := User{}
- 	returns.ID = dbuser.ID
-	returns.CreatedAt = dbuser.CreatedAt
-	returns.UpdatedAt = dbuser.UpdatedAt
-	returns.Email = dbuser.Email
-	returns.isChirpRed = dbUser.isChirpRed
+ 	returns.ID = dbUser.ID
+	returns.CreatedAt = dbUser.CreatedAt
+	returns.UpdatedAt = dbUser.UpdatedAt
+	returns.Email = dbUser.Email
+	returns.IsChirpyRed = dbUser.IsChirpyRed
 
     dat, err := json.Marshal(returns)
 	if err != nil {
@@ -503,7 +503,7 @@ func (cfg *apiConfig) polkaWebhooks(w http.ResponseWriter, req *http.Request) {
 	}{}
     
     decoder := json.NewDecoder(req.Body)
-    err = decoder.Decode(&params)
+    err := decoder.Decode(&params)
     if err != nil {
 		returnError(w, 500, "Invalid json parameters", err)
 		return
@@ -511,7 +511,12 @@ func (cfg *apiConfig) polkaWebhooks(w http.ResponseWriter, req *http.Request) {
 	//check if event is "user.upgraded" if not respond with 204
 	if params.Event == "user.upgraded" {
 		//upgrade user to red
-		dbuser, dberr := cfg.dbQueries.UpdateRed(req.Context(), params.Data.UserID)
+		uID, err := uuid.Parse(params.Data.UserID)
+		if err != nil {
+			returnError(w, 404, "User not found", err)
+			return
+		}
+		_, dberr := cfg.dbQueries.UpdateRed(req.Context(), uID)
 		if dberr != nil {
 			//on error respond with 404
 			returnError(w, 404, "User not found", dberr)
