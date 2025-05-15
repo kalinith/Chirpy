@@ -43,6 +43,7 @@ func main() {
 	serveMux.HandleFunc("POST /api/revoke", apiCfg.revoke)//revoke refresh token
 	serveMux.HandleFunc("PUT /api/users", apiCfg.passwordUpdate)//revoke refresh token
 	serveMux.HandleFunc("DELETE /api/chirps/{chirpID}", apiCfg.deleteChirp)//Allow a user to delete a Chirp he owns
+	serveMux.HandleFunc("POST /api/polka/webhooks", apiCfg.polkaWebhooks)//revoke refresh token
 
 	server := &http.Server{
 		Addr: ":" + port, //they used a constant for the port, this may be required at some point.

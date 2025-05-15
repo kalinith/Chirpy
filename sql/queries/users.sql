@@ -17,6 +17,16 @@ SET hashed_password = $1,
 WHERE id = $3
 RETURNING *;
 
+-- name: UpdateRed :one
+UPDATE users
+SET updated_at = NOW(),
+    is_chirpy_red = True
+WHERE id = $1
+RETURNING *;
+
+-- name: DeleteUsers :exec
+DELETE FROM users;
+
 -- name: GetUser :one
 SELECT *
     FROM users
@@ -26,7 +36,3 @@ SELECT *
 SELECT email
     FROM users
     ORDER BY email;
-
--- name: DeleteUsers :exec
-DELETE FROM users;
-

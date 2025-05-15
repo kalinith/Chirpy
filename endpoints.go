@@ -165,6 +165,7 @@ func (cfg *apiConfig) addUser(w http.ResponseWriter, req *http.Request) {
 	returns.CreatedAt = dbUser.CreatedAt
 	returns.UpdatedAt = dbUser.UpdatedAt
 	returns.Email = dbUser.Email
+	returns.isChirpRed = dbUser.isChirpRed
 
     //formulate reply here
     dat, err := json.Marshal(returns)
@@ -307,6 +308,7 @@ func (cfg *apiConfig) login(w http.ResponseWriter, req *http.Request) {
 	returns.Email = dbUser.Email
 	returns.Token = token
 	returns.RefreshToken = refreshTokenRecord.Token
+	returns.isChirpRed = dbUser.isChirpRed
 
     //formulate reply here
     dat, err := json.Marshal(returns)
@@ -421,6 +423,7 @@ func (cfg *apiConfig) passwordUpdate(w http.ResponseWriter, req *http.Request) {
 	returns.CreatedAt = dbuser.CreatedAt
 	returns.UpdatedAt = dbuser.UpdatedAt
 	returns.Email = dbuser.Email
+	returns.isChirpRed = dbUser.isChirpRed
 
     dat, err := json.Marshal(returns)
 	if err != nil {
@@ -481,3 +484,40 @@ func (cfg *apiConfig) deleteChirp(w http.ResponseWriter, req *http.Request) {
 	}
 	w.WriteHeader(204)
 }
+
+func (cfg *apiConfig) polkaWebhooks(w http.ResponseWriter, req *http.Request) {
+/*
+{
+  "event": "user.upgraded",
+  "data": {
+    "user_id": "3311741c-680c-4546-99f3-fc9efac2036c"
+  }
+}
+*/
+	//read parameters out of the body of the request
+	params := struct {
+		Event string `json:"event"`
+		Data  struct {
+			UserID string `json:"user_id"`
+		} `json:"data"`
+	}{}
+    
+    decoder := json.NewDecoder(req.Body)
+    err = decoder.Decode(&params)
+    if err != nil {
+		returnError(w, 500, "Invalid json parameters", err)
+		return
+    }
+	//check if event is "user.upgraded" if not respond with 204
+	if params.Event == "user.upgraded" {
+		//upgrade user to red
+		dbuser, dberr := cfg.dbQueries.UpdateRed(req.Context(), params.Data.UserID)
+		if dberr != nil {
+			//on error respond with 404
+			returnError(w, 404, "User not found", dberr)
+			return
+		}
+	}
+	w.WriteHeader(204)
+}
+
