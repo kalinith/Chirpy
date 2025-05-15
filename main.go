@@ -19,7 +19,7 @@ func main() {
 	dbURL := os.Getenv("DB_URL")
 	apiCfg.platform = os.Getenv("PLATFORM")
 	apiCfg.jwt_Secret = os.Getenv("JWT_SECRET")
-	
+	apiCfg.polkaKey = os.Getenv("POLKA_KEY")
 	db, err := sql.Open("postgres", dbURL)
 	if err != nil {
 		log.Fatal("unable to open DB")

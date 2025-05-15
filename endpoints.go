@@ -486,14 +486,18 @@ func (cfg *apiConfig) deleteChirp(w http.ResponseWriter, req *http.Request) {
 }
 
 func (cfg *apiConfig) polkaWebhooks(w http.ResponseWriter, req *http.Request) {
-/*
-{
-  "event": "user.upgraded",
-  "data": {
-    "user_id": "3311741c-680c-4546-99f3-fc9efac2036c"
-  }
-}
-*/
+	//read header to get token
+	apiKey, err := auth.GetAPIKey(req.Header)
+	if err != nil {
+		returnError(w, 401, "Invalid API Key", nil)
+		return
+	}
+
+	if apiKey != cfg.polkaKey {
+		//on error respond with 404
+		returnError(w, 401, "Invalid API Key", nil)
+		return
+	}
 	//read parameters out of the body of the request
 	params := struct {
 		Event string `json:"event"`
@@ -503,7 +507,7 @@ func (cfg *apiConfig) polkaWebhooks(w http.ResponseWriter, req *http.Request) {
 	}{}
     
     decoder := json.NewDecoder(req.Body)
-    err := decoder.Decode(&params)
+    err = decoder.Decode(&params)
     if err != nil {
 		returnError(w, 500, "Invalid json parameters", err)
 		return
