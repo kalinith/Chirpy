@@ -186,8 +186,18 @@ func (cfg *apiConfig) getChirps(w http.ResponseWriter, req *http.Request) {
 		Body string `json:"body"`
 		UserID uuid.UUID `json:"user_id"`
 	}
+	s := req.URL.Query().Get("author_id")
+	// s is a string that contains the value of the author_id query parameter
+	// if it exists, or an empty string if it doesn't
+	fetchedChirps := []database.Chirp{}
+	//err := make(error.Error())
+	userID, err := uuid.Parse(s)
 
-	fetchedChirps, err := cfg.dbQueries.GetChirps(req.Context())
+	if s != "" {
+		fetchedChirps, err = cfg.dbQueries.GetAuthorChirps(req.Context(), userID)
+	} else {
+		fetchedChirps, err = cfg.dbQueries.GetChirps(req.Context())
+	}
 	if err != nil {
 		returnError(w, 500, "unable to fetch Chirps", err)
 		return
