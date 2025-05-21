@@ -1,8 +1,8 @@
 # Chirpy
 
 ## What is Chirpy
-serveMux.Handle("/app/",apiCfg.middlewareMetricsInc(http.StripPrefix("/app",rootHandler))) //Static file content
-
+Chirpy is a guided project for learning HTTP servers.
+It uses a combination of static content and APi's to serve this purpose.
 ## API Commands
 
 ### User Related Commands
@@ -10,7 +10,7 @@ serveMux.Handle("/app/",apiCfg.middlewareMetricsInc(http.StripPrefix("/app",root
 #### /api/users
 
 1. ```POST /api/users```
-	accepts a user in the form of e-mail and password.
+	accepts a user in the form of an email and a password.
 	```
 	{
 		"email":"user@example.com"
@@ -26,32 +26,40 @@ serveMux.Handle("/app/",apiCfg.middlewareMetricsInc(http.StripPrefix("/app",root
 		"email":"example@domain.com"
 		"is_chirpy_red":"False"
 	}
-```
+	```
+2. ```PUT /api/users```
+	This call will reset the users email and password. It requres an auth token in the header as well as a body in the format
+	```
+	{
+		"email":"user@example.com"
+		"password":"plain text password"
+	}
+	```
+3. ```POST /api/login```
+   	accepts a login and returns a refresh token.
+4. ```POST /api/refresh```
+	Accepts a refresh token and returns an access token.
+5. ```POST /api/revoke```
+	This will revoke a refresh token
 
-PUT /api/users", apiCfg.passwordUpdate)//revoke refresh token
-POST /api/login", apiCfg.login)//login user will eventually return a token.
-
-POST /api/refresh", apiCfg.refresh)//Refresh the access token.
-POST /api/revoke", apiCfg.revoke)//revoke refresh token
-
-### Chirp related Commands
-the /api/chirps path will be used to interact with chirps
+### Chirp-related Commands
+The **/api/chirps** path will be used to interact with chirps
 
 1. ```GET /api/chirps```
 	This API call will return all the Chirps in the system.
 	It accepts the following queries
 		sort: can be asc or desc and will order the chirps by date.
-	 	author_id: The uuid of a chirpy user, to only retrieve Chirps for that user.
+	 	author_id: The UUID of a chirpy user. When included, it will retrieve Chirps for that user.
 
 	Examples of Valid URLs
 	```GET http://localhost:8080/api/chirps?sort=asc
 	GET http://localhost:8080/api/chirps?sort=desc
 	GET http://localhost:8080/api/chirps
 	GET http://localhost:8080/api/chirps?author_id=000000-0000000-0000000
-```
+	```
 2. ```GET /api/chirps/{chirpID}```
 	fetch a chirp by its ID
-3.	```POST /api/chirps```
+3. ```POST /api/chirps```
 	Add a Chirp, accepts the chirp in the following format, The chirp will be addded for the currtently logged in user.
 	```{
 		"body":"this is a chirp"
@@ -62,7 +70,11 @@ the /api/chirps path will be used to interact with chirps
 
 ### Admin Commands
 
-GET /api/healthz", health) //health check to see if site is ready to receive.
-GET /admin/metrics", apiCfg.metrics) //show the server statistics
-POST /admin/reset", apiCfg.reset) //reset metrics
-POST /api/polka/webhooks", apiCfg.polkaWebhooks)//revoke refresh token
+1. GET /api/healthz
+	health check to see if site is ready to receive.
+2. GET /admin/metrics
+	show the server statistics
+3. POST /admin/reset
+	reset metrics and clean the Database
+4. POST /api/polka/webhooks
+	webhook endpoint for Polka
