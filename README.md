@@ -35,19 +35,30 @@ POST /api/refresh", apiCfg.refresh)//Refresh the access token.
 POST /api/revoke", apiCfg.revoke)//revoke refresh token
 
 ### Chirp related Commands
+the /api/chirps path will be used to interact with chirps
 
-GET /api/chirps", apiCfg.getChirps) //fetch all chirps
+1. ```GET /api/chirps```
+	This API call will return all the Chirps in the system.
+	It accepts the following queries
+		sort: can be asc or desc and will order the chirps by date.
+	 	author_id: The uuid of a chirpy user, to only retrieve Chirps for that user.
 
-Examples of Valid URLs
-GET http://localhost:8080/api/chirps?sort=asc
-GET http://localhost:8080/api/chirps?sort=desc
-GET http://localhost:8080/api/chirps
-
-
-
-GET /api/chirps/{chirpID}", apiCfg.getChirp) //fetch one chirp by ID
-POST /api/chirps", apiCfg.addChirp) //add a Chirp
-DELETE /api/chirps/{chirpID}", apiCfg.deleteChirp)//Allow a user to delete a Chirp he owns
+	Examples of Valid URLs
+	```GET http://localhost:8080/api/chirps?sort=asc
+	GET http://localhost:8080/api/chirps?sort=desc
+	GET http://localhost:8080/api/chirps
+	GET http://localhost:8080/api/chirps?author_id=000000-0000000-0000000
+```
+2. ```GET /api/chirps/{chirpID}```
+	fetch a chirp by its ID
+3.	```POST /api/chirps```
+	Add a Chirp, accepts the chirp in the following format, The chirp will be addded for the currtently logged in user.
+	```{
+		"body":"this is a chirp"
+	}
+	```
+4. ```DELETE /api/chirps/{chirpID}```
+	Allow a user to delete a Chirp he owns, {chirpID} will be the uuid of the chirp the user wishes to delete
 
 ### Admin Commands
 
