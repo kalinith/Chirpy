@@ -37,6 +37,14 @@ POST /api/revoke", apiCfg.revoke)//revoke refresh token
 ### Chirp related Commands
 
 GET /api/chirps", apiCfg.getChirps) //fetch all chirps
+
+Examples of Valid URLs
+GET http://localhost:8080/api/chirps?sort=asc
+GET http://localhost:8080/api/chirps?sort=desc
+GET http://localhost:8080/api/chirps
+
+
+
 GET /api/chirps/{chirpID}", apiCfg.getChirp) //fetch one chirp by ID
 POST /api/chirps", apiCfg.addChirp) //add a Chirp
 DELETE /api/chirps/{chirpID}", apiCfg.deleteChirp)//Allow a user to delete a Chirp he owns

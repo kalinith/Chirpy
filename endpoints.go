@@ -4,6 +4,7 @@ import(
 	"fmt"
 	"log"
 	"time"
+	"sort"
 	"net/http"
 	"encoding/json"
 	"github.com/google/uuid"
@@ -187,10 +188,10 @@ func (cfg *apiConfig) getChirps(w http.ResponseWriter, req *http.Request) {
 		UserID uuid.UUID `json:"user_id"`
 	}
 	s := req.URL.Query().Get("author_id")
+	so := req.URL.Query().Get("sort")
 	// s is a string that contains the value of the author_id query parameter
 	// if it exists, or an empty string if it doesn't
 	fetchedChirps := []database.Chirp{}
-	//err := make(error.Error())
 	userID, err := uuid.Parse(s)
 
 	if s != "" {
@@ -212,6 +213,19 @@ func (cfg *apiConfig) getChirps(w http.ResponseWriter, req *http.Request) {
 		newChirp.Body = fetchedChirp.Body
 		newChirp.UserID = fetchedChirp.UserID
 		returnChirps = append(returnChirps, newChirp)
+	}
+
+	//sort list based on sort parameter in query string of URL
+	if so == "desc" {
+		// For descending order (newest first)
+		sort.Slice(returnChirps, func(i, j int) bool {
+    		return returnChirps[i].CreatedAt.After(returnChirps[j].CreatedAt)
+		})
+	} else {//anything not desc is asc
+		// For ascending order (oldest first)
+		sort.Slice(returnChirps, func(i, j int) bool {
+		    return returnChirps[i].CreatedAt.Before(returnChirps[j].CreatedAt)
+		})
 	}
 
     dat, err := json.Marshal(returnChirps)
